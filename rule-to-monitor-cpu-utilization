@@ -1,0 +1,23 @@
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: high-cpu-pod
+  namespace: namespaceName
+spec:
+  groups:
+    - name: high-cpu-usage-rules
+      rules:
+        - alert: PodHighCpuUtilization
+          expr: |
+            ((sum(irate(container_cpu_usage_seconds_total{image!="",container!="POD", namespace!="kube-system"}[2m])) by (namespace,container,pod) /
+            sum(container_spec_cpu_quota{image!="",container!="POD", namespace!="kube-system"} /
+            container_spec_cpu_period{image!="",container!="POD", namespace!="kube-system"}) by (namespace,container,pod) ) * 100)  > 80
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: Container name:"{{$labels.container}}" in Pod name:"{{$labels.pod}}" in Namespace:"{{$labels.namespace}}" is using more than 80% of CPU Limit
+            description: "Namespace: {{$labels.namespace}}\n, Pod name: {{$labels.pod}}\n, Container name: {{$labels.container}}\n"
+
